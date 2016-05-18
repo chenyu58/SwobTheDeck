@@ -418,11 +418,16 @@ def csv_out(results_list, ordered_titles, filename):
         ordered_titles_list = finalize_titles(ordered_titles)
         
         # Write the header and data to the csv file
-        with open(filename, "wb") as f:
-            writer = csv.writer(f)
-            writer.writerow(ordered_titles_list)
-            writer.writerows(ordered_results_list)
-        
+        if os.path.exists(filename):
+            with open(filename, "a") as f:
+                writer = csv.writer(f)
+                writer.writerows(ordered_results_list)
+        else:
+            with open(filename, "wb") as f:
+                writer = csv.writer(f)
+                writer.writerow(ordered_titles_list)
+                writer.writerows(ordered_results_list)
+
         # We were successful
         return True
     except:
@@ -434,7 +439,7 @@ def csv_out(results_list, ordered_titles, filename):
 A collection of examples on how to use these functions
 """
 if __name__ == "__main__":
-    # Specify the date in YYYYMMDD format.
+    """    # Specify the date in YYYYMMDD format.
     # Here we get the current ZULU date in YYYYMMDD format.
     strdate = datetime.datetime.utcnow().strftime("%Y%m%d")
     # Example of how to get all stations.
@@ -447,3 +452,48 @@ if __name__ == "__main__":
     # Example of how to output data to Excel and CSV formats.
     excel_out(results_list, ordered_titles, "output.xls")
     csv_out(results_list, ordered_titles, "output.csv")
+    """
+    f = open("mapfile.csv","r");
+    ID = []
+    Province = []
+    f.readline()
+    WrongID = [] 
+    while True:
+        line = f.readline()
+        if line == '\n':
+            break;
+        parts = line.split(",")
+        if parts[3] == '\n':
+            continue
+        ID.append(parts[3])
+        Province.append(parts[1])
+    
+    td = datetime.date.today()
+    one_day = datetime.timedelta(days=1)
+    days = 1
+    
+    while days < 31:
+        date  = td - days*one_day
+        strdate = date.strftime("%Y%m%d")
+        all_stations = get_stations_list(urlroot,strdate)
+        clean_dict, clean = clean_incoming()
+        for station in all_stations:
+            try:
+                ind = ID.index(station + "\n") 
+                Pro = Province[ind]
+                results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
+                csv_out(results_list,ordered_titles,Pro + strdate)
+            except:
+                WrongID.append(station)
+                continue
+        days = days + 1
+        print days
+
+
+
+
+
+
+
+
+
