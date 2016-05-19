@@ -538,11 +538,29 @@ if __name__ == "__main__":
             except:
                 WrongID.append(station)
                 continue
-            print station
-        print WrongID   
+        if os.path.exists("log.txt"):
+            with open("log.txt", "a") as f:
+                f.write(time_now.strftime("%Y%m%d   %H")+":00 process finished\n")
+                f.write("These stations is not on station mapping list: " + WrongID + "\n")
+                f.close()
+        else:
+            with open("log.txt", "wb") as f:
+                f.write(time_now.strftime("%Y%m%d   %H")+":00 process finished\n")
+                f.write("These stations is not on station mapping list: " + WrongID + "\n")
+                f.close()
     else:   
         with open("flag.txt", "w") as f:
             f.close()
+        time_now = datetime.datetime.utcnow()
+        if os.path.exists("log.txt"):
+            with open("log.txt", "a") as f:
+                f.write(time_now.strftime("%Y%m%d   %H")+":00 initial process starts\n")
+                f.close()
+        else:
+            with open("log.txt", "wb") as f:
+                f.write(time_now.strftime("%Y%m%d   %H")+":00 initial process starts\n")
+                f.close()
+
         while days < 31:
             date  = td - days*one_day
             strdate = date.strftime("%Y%m%d")
@@ -559,6 +577,12 @@ if __name__ == "__main__":
                     continue
             days = days + 1
             print days
+        with open("log.txt","w") as f:
+            f.write("These stations is not on station mapping list: " + WrongID + "\n")
+            f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H") + ":00 initial process ended\n")
+            f.close()
+
+
 
 
 
