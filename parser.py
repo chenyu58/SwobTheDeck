@@ -115,6 +115,7 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
            Default: 500
     :returns: (list, list) a list of dicts where each dict is the xml data from one link, and a list of sorted titles
     """
+    title_list_sorted = []
     total_xml_data = []
     for xml_address in xml_links:
         catcher=0
@@ -188,6 +189,42 @@ def parse_station(urlroot, strdate, station, title_dict={}, clean_dict={}, clean
             file_name = tag['href'].encode('ascii','ignore')
             one_station_xml_links.append(file_name)
     
+    one_station_data_list, ordered_titles = parse_xml_links(one_station_url, one_station_xml_links, title_dict=title_dict, clean_dict=clean_dict, clean=clean)
+
+    return one_station_data_list, ordered_titles
+
+def parse_station_hourly(urlroot, strdate, hour,station, title_dict={}, clean_dict={}, clean=False, default_order=500):
+    """
+    Parses all station data from a date on a hourly basis
+    :param urlroot: (str) the url root from which all SWOB-ML dates are listed
+    :param strdate: (str) the date in "YYYYMMDD" format to get the station data on
+    :param hour: (str) the hour in "HH00" format to get the station data
+    :param station: (str) the three (or four) character station identifier eg. "VSL"
+    :param title_dict: (dict optional) a dictionary in {'field' : [order,uom],...} format for later formatting of field names
+           Default: {}
+    :param clean_dict: (dict optional) a dictionary of
+           {"field_name":["Readable Field Name",(int) Priority],...} format
+           Default: {}
+    :param clean: (bool optional) True if data should be cleaned using clean_dict, or False otherwise
+           Default: False
+    :param default_order: (int optional) the desired default order for fields to appear in outputs in.
+           Default: 500
+    :returns: (list, list) a list of dicts where each dict is the xml data from one hour at the station, and a list of sorted titles
+    """
+    if station.__len__() == 3:
+        station = "C" + station
+
+    one_station_url = urlroot + strdate + "/" + station + "/"
+
+    one_station_html = get_html_string(one_station_url)
+
+    one_station_xml_links = []
+    one_station_soup = BeautifulSoup.BeautifulSoup(one_station_html)
+    for tag in one_station_soup.findAll('a', href=True):
+        if ".xml" and hour in tag['href']:
+            file_name = tag['href'].encode('ascii','ignore')
+            one_station_xml_links.append(file_name)
+
     one_station_data_list, ordered_titles = parse_xml_links(one_station_url, one_station_xml_links, title_dict=title_dict, clean_dict=clean_dict, clean=clean)
 
     return one_station_data_list, ordered_titles
@@ -439,7 +476,8 @@ def csv_out(results_list, ordered_titles, filename):
 A collection of examples on how to use these functions
 """
 if __name__ == "__main__":
-    """    # Specify the date in YYYYMMDD format.
+    """ Old source code:   
+    # Specify the date in YYYYMMDD format.
     # Here we get the current ZULU date in YYYYMMDD format.
     strdate = datetime.datetime.utcnow().strftime("%Y%m%d")
     # Example of how to get all stations.
@@ -453,6 +491,8 @@ if __name__ == "__main__":
     excel_out(results_list, ordered_titles, "output.xls")
     csv_out(results_list, ordered_titles, "output.csv")
     """
+
+    """Mapping station to province list"""
     f = open("mapfile.csv","r");
     ID = []
     Province = []
@@ -468,26 +508,57 @@ if __name__ == "__main__":
         ID.append(parts[3])
         Province.append(parts[1])
     
+    """get today's date and time"""
     td = datetime.date.today()
     one_day = datetime.timedelta(days=1)
     days = 1
+    strdate = td.strftime("%Y%m%d")
     
-    while days < 31:
-        date  = td - days*one_day
-        strdate = date.strftime("%Y%m%d")
+    """Check for running for condition, if flag.txt does not exit, progrom will perform a initial run 
+    to consolidate data from the past 30 days, then create the flag.txt file.
+    If flag.txt exist, program will directly enter hourly mode to consolidate data every hour"""
+    if os.path.exists("flag.txt"):
+        print ("Hourly mode\n") 
+        time_now = datetime.datetime.utcnow()
+        hr = time_now.strftime("%H" + "00")
         all_stations = get_stations_list(urlroot,strdate)
         clean_dict, clean = clean_incoming()
+        hour = int(hr)
+        if hour == 0000:
+            hour = 2300
+        else:
+            hour = hour - 100 
+
         for station in all_stations:
             try:
-                ind = ID.index(station + "\n") 
+                ind = ID.index(station + "\n")
                 Pro = Province[ind]
-                results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
-                csv_out(results_list,ordered_titles,Pro + strdate)
+                result_list, ordered_titles = parse_station_hourly(urlroot,strdate,str(hour),station,clean_dict=clean_dict,clean=clean)
+                csv_out(result_list,ordered_titles,Pro + strdate)
             except:
                 WrongID.append(station)
                 continue
-        days = days + 1
-        print days
+            print station
+        print WrongID   
+    else:   
+        with open("flag.txt", "w") as f:
+            f.close()
+        while days < 31:
+            date  = td - days*one_day
+            strdate = date.strftime("%Y%m%d")
+            all_stations = get_stations_list(urlroot,strdate)
+            clean_dict, clean = clean_incoming()
+            for station in all_stations:
+                try:
+                    ind = ID.index(station + "\n") 
+                    Pro = Province[ind]
+                    results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
+                    csv_out(results_list,ordered_titles,Pro + strdate)
+                except:
+                    WrongID.append(station)
+                    continue
+            days = days + 1
+            print days
 
 
 
