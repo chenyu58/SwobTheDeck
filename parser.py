@@ -540,13 +540,15 @@ if __name__ == "__main__":
                 continue
         if os.path.exists("log.txt"):
             with open("log.txt", "a") as f:
-                f.write(time_now.strftime("%Y%m%d   %H")+":00 process finished\n")
-                f.write("These stations is not on station mapping list: " + WrongID + "\n")
+                f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" process finished\n")
+                f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+                f.write("\n")
                 f.close()
         else:
             with open("log.txt", "wb") as f:
-                f.write(time_now.strftime("%Y%m%d   %H")+":00 process finished\n")
-                f.write("These stations is not on station mapping list: " + WrongID + "\n")
+                f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" process finished\n")
+                f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+                f.write("\n")
                 f.close()
     else:   
         with open("flag.txt", "w") as f:
@@ -554,11 +556,13 @@ if __name__ == "__main__":
         time_now = datetime.datetime.utcnow()
         if os.path.exists("log.txt"):
             with open("log.txt", "a") as f:
-                f.write(time_now.strftime("%Y%m%d   %H")+":00 initial process starts\n")
+                f.write(time_now.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
+                f.write("\n")
                 f.close()
         else:
             with open("log.txt", "wb") as f:
-                f.write(time_now.strftime("%Y%m%d   %H")+":00 initial process starts\n")
+                f.write(time_now.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
+                f.write("\n")
                 f.close()
 
         while days < 31:
@@ -578,8 +582,9 @@ if __name__ == "__main__":
             days = days + 1
             print days
         with open("log.txt","w") as f:
-            f.write("These stations is not on station mapping list: " + WrongID + "\n")
-            f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H") + ":00 initial process ended\n")
+            f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+            f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
+            f.write("\n")
             f.close()
 
 
