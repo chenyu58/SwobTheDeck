@@ -61,7 +61,7 @@ def get_stations_list(urlroot, strdate):
     
     return all_stations_list
 
-def clean_incoming(clean_info_filename="in.txt", default_order=500):
+def clean_incoming(clean_info_filename="in.txt"):
     """
     Creates an index from which to sort data.  Indexable by field_name and includes whether or not to override
     field_name with a human specified readable field name and desired order.
@@ -81,23 +81,26 @@ def clean_incoming(clean_info_filename="in.txt", default_order=500):
         clean_info = {}
         clean_info_file_obj = file(clean_info_filename,'rb')
         split = csv.reader(clean_info_file_obj, delimiter=',', skipinitialspace=True)
+        clean_info["date_tm"] = ["Date and Time", 0]
+        clean_info["stn_nam"] = ["Station Name", 2]
+        clean_info["tc_id"] = ["TC Indentifier", 4]
+	clean_info["wmo_synop_id"] = ["WMO Synoptic Identifier", 6]
+	clean_info["clim_id"] = ["Climate Identifier", 8]
+	counter = 10
+	title = ["date_tm","stn_nam","tc_id","wmo_synop_id","clim_id"] 
         for line_data_list in split:
             if line_data_list.__len__()<=3:
                 clean = True
-                line_data_list.append(default_order)
-                clean_info[line_data_list[0]]=[line_data_list[1],line_data_list[2]]
-                clean_info["date_tm"] = ["date_tm", -3]
-                clean_info["tc_id"]   = ["TC ID", -2]
-                clean_info["stn_nam"] = ["Station Name", -1]
-                clean_info["lat"]     = ["lat", -120]
-                clean_info["long"]    = ["long", -120]
-                clean_info["msc/observation/atmospheric/surface_weather/ca-1.0-ascii"]=["mscschema", -100]
+                clean_info[line_data_list[0]]=[line_data_list[1],counter]
+                counter = counter + 2
+		title.append(line_data_list[0])
+	
     except:
         clean = False
         if clean_info_filename != "OFF":
             print "Can't read file passed to clean_incoming()"
     
-    return clean_info, clean
+    return clean_info, clean, title
 
 def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={}, clean=False, default_order=500):
     """
@@ -130,11 +133,12 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
                 
             lastname = ""
             single_xml_data = {}
+            counter = 0
             for node in xml_parser_obj.getiterator():
                 name  = node.attrib.get('name')
                 value = node.attrib.get('value')
                 uom   = unicode(node.attrib.get('uom')).encode('ascii','ignore')
-                order = int(default_order)
+                order = counter
                 qual  = "qa_none"
                 if name == "qa_summary":
                     qual = str(value)
@@ -142,9 +146,8 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
                 else:
                     if clean == True:
                         try:
-                            order = int(clean_dict[name][1])
-                            # Modify name last (lookups depend on it)
-                            name = clean_dict[name][0]
+                            order = counter
+                            counter = counter + 1
                         except:
                             pass
                         
@@ -155,6 +158,7 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
             
             total_xml_data.append(single_xml_data)
             title_list_sorted = sorted(title_dict.iteritems(),key=itemgetter(1), reverse=False)
+            
 
     return total_xml_data, title_list_sorted
 
@@ -226,54 +230,8 @@ def parse_station_hourly(urlroot, strdate, hour,station, title_dict={}, clean_di
             one_station_xml_links.append(file_name)
 
     one_station_data_list, ordered_titles = parse_xml_links(one_station_url, one_station_xml_links, title_dict=title_dict, clean_dict=clean_dict, clean=clean)
-
+    
     return one_station_data_list, ordered_titles
-
-def order_row(row, ordered_titles):
-    """
-    Orders an individual row so that it follows the field order of ordered_titles
-    :param row: a dict from the results_list
-    :param ordered_titles: a list of field title tuples ordered by priority in
-        [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
-        where each tuple in the list is used to order the data in results_list and for the header data.
-    :returns: (list) a row as a list with just the data values as columns.  No units or qualifiers are included.
-    """
-    ordered_row = []
-    for name in ordered_titles:
-        ordered_row.append(str(row.get(name[0],[""])[0]))
-    
-    return ordered_row
-
-def order_results(results_list, ordered_titles):
-    """
-    Orders list results so that they follow the field order of ordered_titles
-    :param results_list: a list of station information in 
-        [{'fieldx_name':["datum","unit",(int) order,"quality"],'fieldx+1_name':[...]},{...},...] format
-        where each dictionary in the list gets rendered as a row
-    :param ordered_titles: a list of field title tuples ordered by priority in
-        [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
-        where each tuple in the list is used to order the data in results_list and for the header data. 
-    :returns: (list) results from input ordered in order of ordered_titles and with only the value as the field
-    """
-    results = []
-    for row in results_list:
-        results.append(order_row(row, ordered_titles))
-    
-    return results
-
-def finalize_titles(ordered_titles):
-    """
-    Clean title information for ["Title (unit)",...] format
-    :param ordered_titles: a list of field title tuples ordered by priority in
-        [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
-        where each tuple in the list is used to order the data in results_list and for the header data.
-    :returns: (list) of str in "Title (unit)" format for use in headers
-    """
-    titles = []
-    for title in ordered_titles:
-        titles.append(str(title[0]) + " (" + str(title[1][1]) + ")")
-    
-    return titles
 
 def get_fonts():
     """
@@ -436,7 +394,7 @@ def excel_out(data_list, titles_list, desired_filename, multi = False):
     except:
         return False
 
-def csv_out(results_list, ordered_titles, filename):
+def csv_out(results_list, ordered_titles, filename, clean_dict, finial_title, length):
     """
     Outputs data to a CSV file
     :param results_list: a list of station information in 
@@ -445,54 +403,85 @@ def csv_out(results_list, ordered_titles, filename):
     :param ordered_titles: a list of field title tuples ordered by priority in
         [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
         where each tuple in the list is used to order the data in results_list and for the header data.
+    :param clean_dict: a dict that used to store the assigned index of given element
+    :param finial_title: a list contain the all the titles that are ready to be printed to output file
+    :length: a int is half of the total length of finial_title
     :param filename: (str) the name of the file to write the csv to
     :returns: (bool) True if successful, False otherwise
     """
     try:
         # Sanitizes the result information so it only inculdes the value
-        ordered_results_list = order_results(results_list, ordered_titles)
-        # Orders the titles into a string list so it can be added to a csv
-        ordered_titles_list = finalize_titles(ordered_titles)
-        
+        ordered_results_list = order_row(results_list, ordered_titles, clean_dict, length)
+            
         # Write the header and data to the csv file
-        if os.path.exists(filename):
+        
+	if os.path.exists(filename):
             with open(filename, "a") as f:
                 writer = csv.writer(f)
-                writer.writerows(ordered_results_list)
+                writer.writerow(ordered_results_list)
         else:
             with open(filename, "wb") as f:
                 writer = csv.writer(f)
-                writer.writerow(ordered_titles_list)
-                writer.writerows(ordered_results_list)
+                writer.writerow(finial_title)
+                writer.writerow(ordered_results_list)
 
         # We were successful
         return True
-    except:
+    except Exception, err:
+        #print str(err)
         # An error occurred
         return False
 
 
+def sort_title(clean_dict, title):
+    """
+    :param clean_dict: a dict contains the readable and original element name, and a number represent the index of this element in a output list
+    :param title: a list contain all keys of clean_dict
+    return: list of finial title, and half of the length of the list
+    """
+    finial_title = []
+    
+    for element in title:
+	#print clean_dict.get(element)[1]
+	finial_title.insert(clean_dict.get(element)[1],clean_dict.get(element)[0])
+	finial_title.insert(clean_dict.get(element)[1] + 1, "QA Summary")
+    
+    return finial_title, len(title)
+
+def order_row(row, ordered_titles, clean_dict, length):
+    """
+    Orders an individual row so that it follows the field order of ordered_titles
+    :param row: results_list
+    :param ordered_titles: a list of field title tuples ordered by priority in
+        [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
+        where each tuple in the list is used to order the data in results_list and for the header data.
+    :param clean_dict: dict used to match readable and original name
+    :param length: a int used to determine the length of output list
+    :returns: (list) a row as a list with just the data values as columns.  QA included
+    """
+    try:
+	
+        ordered_row = [""] * length * 2
+        
+	for name in ordered_titles:
+	    if  clean_dict.get(name[0],[""]) != [""]:                
+                if row[0].get(name[0],[""]) != [""]:
+		    ordered_row[clean_dict.get(name[0])[1]] = str(row[0].get(name[0])[0])
+		    ordered_row[clean_dict.get(name[0])[1] + 1] = str(row[0].get(name[0])[3])
+        
+	return ordered_row
+    except Exception, err:
+        print str(err)
+        print clean_dict.get(name[0])[1]
+        return ordered_row
+
+
 """
-A collection of examples on how to use these functions
+Main Class
 """
 if __name__ == "__main__":
-    """ Old source code:   
-    # Specify the date in YYYYMMDD format.
-    # Here we get the current ZULU date in YYYYMMDD format.
-    strdate = datetime.datetime.utcnow().strftime("%Y%m%d")
-    # Example of how to get all stations.
-    all_stations = get_stations_list(urlroot, strdate)
-    # Get the rules for cleaning and sorting output files.
-    clean_dict, clean = clean_incoming()
-    # Parse the data for a station.  "VSL" is used in this example.
-    results_list, ordered_titles = parse_station(urlroot, strdate, "VSL", clean_dict=clean_dict, clean=clean)
     
-    # Example of how to output data to Excel and CSV formats.
-    excel_out(results_list, ordered_titles, "output.xls")
-    csv_out(results_list, ordered_titles, "output.csv")
-    """
-
-    """Mapping station to province list"""
+    #Mapping station to province list
     f = open("mapfile.csv","r");
     ID = []
     Province = []
@@ -508,7 +497,7 @@ if __name__ == "__main__":
         ID.append(parts[3])
         Province.append(parts[1])
     
-    """get today's date and time"""
+    #get today's date and time
     td = datetime.date.today()
     one_day = datetime.timedelta(days=1)
     days = 1
@@ -522,7 +511,8 @@ if __name__ == "__main__":
         time_now = datetime.datetime.utcnow()
         hr = time_now.strftime("%H" + "00")
         all_stations = get_stations_list(urlroot,strdate)
-        clean_dict, clean = clean_incoming()
+        clean_dict, clean, raw_title = clean_incoming()
+        finial_title, length = sort_title(clean_dict, raw_title)
         hour = int(hr)
         if hour == 0000:
             hour = 2300
@@ -534,7 +524,7 @@ if __name__ == "__main__":
                 ind = ID.index(station + "\n")
                 Pro = Province[ind]
                 result_list, ordered_titles = parse_station_hourly(urlroot,strdate,str(hour),station,clean_dict=clean_dict,clean=clean)
-                csv_out(result_list,ordered_titles,Pro + strdate)
+                csv_out(result_list,ordered_titles,Pro + strdate, clean_dict, finial_title, length)
             except:
                 WrongID.append(station)
                 continue
@@ -565,22 +555,24 @@ if __name__ == "__main__":
                 f.write("\n")
                 f.close()
 
+        clean_dict, clean, raw_title = clean_incoming()
+        finial_title, length = sort_title(clean_dict, raw_title)
         while days < 31:
+            print days
             date  = td - days*one_day
             strdate = date.strftime("%Y%m%d")
             all_stations = get_stations_list(urlroot,strdate)
-            clean_dict, clean = clean_incoming()
             for station in all_stations:
                 try:
                     ind = ID.index(station + "\n") 
                     Pro = Province[ind]
                     results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
-                    csv_out(results_list,ordered_titles,Pro + strdate)
+                    csv_out(results_list,ordered_titles,Pro + strdate, clean_dict, finial_title, length)
                 except:
                     WrongID.append(station)
                     continue
             days = days + 1
-            print days
+            
         with open("log.txt","w") as f:
             f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
             f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")

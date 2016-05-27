@@ -1,14 +1,9 @@
-tc_id, TC indentifier, 0
 long, Longitude, 1
 lat, Latitude, 2
 stn_elev, Station Height, 3
 stn_typ, Station Type, 4
 rpt_typ, Report Type, 5
-clim_id, Climate Identifer, 6
-data_tm, Date & Time, 7
-wmo_synop_id, WMO Synoptic Identifier, 8
 icao_stn_id, ICAO Station Identifier, 9
-stn_nam, Station Name, 10
 msc_id, MSC Identifier, 11
 cor, Correction, 12
 tot_cld_opcty, Total Cloud Opacity, 13
@@ -51,7 +46,8 @@ mslp, Mean Seal Level Pressure, 49
 air_temp, Air Temperature, 50
 dwpt_temp, Dew Point Temperature, 51
 avg_wnd_dir_10m_mt58-60, 2 min Vectoral Average 10m Wind Direction, 52
-avg_wnd_spd_10m_mt58-60, 2 min Average 10m, Wind Speed, 53
+avg_wnd_spd_10m_mt58-60, 2 min Average 10m Wind Speed, 53
+avg_wnd_spd_10m_mt50-60, 10 min Average 10m Wind Speed, 165
 wnd_gst_char_10m_mt50-60, 10 min Wind Gust Character, 54
 max_wnd_gst_spd_10m_mt50-60, 10 min Maximum 10m Wind Gust Speed, 55
 pres_tend_char_pst3hrs, Past 3-hour Trend Pressure Tendency Characteristic, 56
@@ -127,6 +123,7 @@ hdr_oscil_drft, HDR transmitter oscillator drift, 125
 avg_uvb_indx_pst1hr, 5-minute Average UVB Index in Past 1hour, 126
 max_rel_hum_pst1hr, Past 1 hour Maximum Relative Humidity, 127
 min_rel_hum_pst1hr, Past 1 hour Minimum Relative Humidity, 128
+rel_hum, Real humidity, 164
 avg_rel_hum_pst1hr, Past 1 hour Average Relative Humidity, 129
 rnfl_amt_pst1hr, Past 1 hour Rainfall Amount, 130
 avg_cum_pcpn_gag_wt_fltrd_55-60, 5min Cumulative Precipitation Gauge Weight, 131
@@ -162,13 +159,11 @@ avg_snw_dpth_pst1hr, Past 1hour Average Snow Depth, 160
 max_vis_pst1hr, Past 1hour Maximum Horizontal Visibility, 161
 avg_globl_solr_radn_pst1hr, Past 1hour Average Global Solar Radition, 162
 tot_globl_solr_radn_pst1hr, Past 1hour Total Global solar Radition, 163
-
-
-
-
-
-
-
-
-
-
+air_temp_12hrs_ago, Past 12 hour air Temperature, 166
+avg_cum_pcpn_gag_wt_fltrd_mt55-60, avg_cum_pcpn_gag_wt_fltrd_mt55-60, 167
+product_swob-xml-2.0, product_swob-xml-2.0, 168
+MSC-DMS-PG-External-XML, MSC-DMS-PG-External-XML, 169
+msc/observation/atmospheric/surface_weather/ra-1.0-ascii, msc/observation/atmospheric/surface_weather/ra-1.0-ascii, 170
+data_prov, data_prov,171
+msc/observation/atmospheric/surface_weather/ca-1.0-ascii, msc/observation/atmospheric/surface_weather/ca-1.0-ascii, 172
+nav_canada/observation/atmospheric/surface_weather/awos-2.0-binary, nav_canada/observation/atmospheric/surface_weather/awos-2.0-binary, 173
