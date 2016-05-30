@@ -20,7 +20,7 @@ See the 'main' section of this file for examples
 
 urlroot = "http://dd.weather.gc.ca/observations/swob-ml/"
 logging.basicConfig(filename = 'swob.log', level = logging.DEBUG)
-logging.basicConfig(format = '%(asctime)s %(message)s')
+
 def get_html_string(url):
     """
     Gets the html string from a url
@@ -544,7 +544,7 @@ if __name__ == "__main__":
     If flag.txt exist, program will directly enter hourly mode to consolidate data every hour"""
     if ARGS.mode == 'Hourly':
         print ("Hourly mode\n") 
-	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process finished\n")
+	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process started\n")
 	logging.info("\n")
         time_now = datetime.datetime.utcnow()
         hr = time_now.strftime("%H" + "00")
@@ -570,7 +570,7 @@ if __name__ == "__main__":
                 continue
         logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process finished\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-        logging.info("\n")
+       
         
     elif ARGS.mode == 'Initial':   
         
@@ -600,7 +600,7 @@ if __name__ == "__main__":
             
         logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-        f.write("\n")
+        
        
     elif ARGS.mode == 'Specified':
 	
