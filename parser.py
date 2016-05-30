@@ -19,7 +19,7 @@ See the 'main' section of this file for examples
 """
 
 urlroot = "http://dd.weather.gc.ca/observations/swob-ml/"
-logging.basicConfig(filename = 'swob.log', level = logging.DEBUG)
+logging.basicConfig(filename = 'swob.log', filemode = 'a', level = logging.DEBUG)
 
 def get_html_string(url):
     """
