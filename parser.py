@@ -8,6 +8,8 @@ import copy
 import sys
 import csv
 import os
+import logging 
+import argparse
 
 """
 These functions are used to collect SWOB-ML data from the Environment Canada
@@ -17,7 +19,8 @@ See the 'main' section of this file for examples
 """
 
 urlroot = "http://dd.weather.gc.ca/observations/swob-ml/"
-
+logging.basicConfig(filename = 'swob.log', level = logging.DEBUG)
+logging.basicConfig(format = '%(asctime)s %(message)s')
 def get_html_string(url):
     """
     Gets the html string from a url
@@ -32,6 +35,7 @@ def get_html_string(url):
             catcher=3
             return html_string
         except:
+	    lgging.error('Link retrieval error on:' + url)
             print "Link retrieval error on:"
             print url
             html_string = ""
@@ -98,6 +102,7 @@ def clean_incoming(clean_info_filename="in.txt"):
     except:
         clean = False
         if clean_info_filename != "OFF":
+	    logging.error("Can't read file passed to clean_incoming")
             print "Can't read file passed to clean_incoming()"
     
     return clean_info, clean, title
@@ -130,7 +135,7 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
             except:
                 catcher+=1
                 print "Error opening xmladdress" + xml_address
-                
+                logging.error("Error opening xmladdress" + xml_address) 
             lastname = ""
             single_xml_data = {}
             counter = 0
@@ -429,6 +434,7 @@ def csv_out(results_list, ordered_titles, filename, clean_dict, finial_title, le
         return True
     except Exception, err:
         #print str(err)
+	logging.error(str(err))
         # An error occurred
         return False
 
@@ -471,6 +477,7 @@ def order_row(row, ordered_titles, clean_dict, length):
         
 	return ordered_row
     except Exception, err:
+	logging.error(str(err))
         print str(err)
         print clean_dict.get(name[0])[1]
         return ordered_row
@@ -481,6 +488,36 @@ Main Class
 """
 if __name__ == "__main__":
     
+    PARSER = \
+        argparse.ArgumentParser(description = 'Swob XML to CSV.')
+
+    PARSER.add_argument(
+        '--mode',
+        help = 'Execution mode',
+        required = True,
+        choices = (
+            'Hourly',
+            'Initial',
+            'Specified'
+        )
+    )
+
+    PARSER.add_argument(
+        '--StartDate',
+        help = 'Choose Starting Date if using Specified Execition Mode. Format: YYYYMMDD',
+        required = False
+    )
+
+    PARSER.add_argument(
+        '--EndDate',
+        help = 'Choose Finishing Date if using Specified Execition Mode. Format: YYYYMMDD',
+        required = False
+    )
+
+
+
+    ARGS = PARSER.parse_args()
+
     #Mapping station to province list
     f = open("mapfile.csv","r");
     ID = []
@@ -498,16 +535,17 @@ if __name__ == "__main__":
         Province.append(parts[1])
     
     #get today's date and time
-    td = datetime.date.today()
+    td = datetime.datetime.utcnow()
     one_day = datetime.timedelta(days=1)
-    days = 1
     strdate = td.strftime("%Y%m%d")
     
     """Check for running for condition, if flag.txt does not exit, progrom will perform a initial run 
     to consolidate data from the past 30 days, then create the flag.txt file.
     If flag.txt exist, program will directly enter hourly mode to consolidate data every hour"""
-    if os.path.exists("flag.txt"):
+    if ARGS.mode == 'Hourly':
         print ("Hourly mode\n") 
+	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process finished\n")
+	logging.info("\n")
         time_now = datetime.datetime.utcnow()
         hr = time_now.strftime("%H" + "00")
         all_stations = get_stations_list(urlroot,strdate)
@@ -525,36 +563,21 @@ if __name__ == "__main__":
                 Pro = Province[ind]
                 result_list, ordered_titles = parse_station_hourly(urlroot,strdate,str(hour),station,clean_dict=clean_dict,clean=clean)
                 csv_out(result_list,ordered_titles,Pro + strdate, clean_dict, finial_title, length)
-            except:
+            except Exception, err:
+		print str(err)
+		logging.error(str(err))
                 WrongID.append(station)
                 continue
-        if os.path.exists("log.txt"):
-            with open("log.txt", "a") as f:
-                f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" process finished\n")
-                f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-                f.write("\n")
-                f.close()
-        else:
-            with open("log.txt", "wb") as f:
-                f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" process finished\n")
-                f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-                f.write("\n")
-                f.close()
-    else:   
-        with open("flag.txt", "w") as f:
-            f.close()
+        logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process finished\n")
+        logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+        logging.info("\n")
+        
+    elif ARGS.mode == 'Initial':   
+        
+	days = 1
         time_now = datetime.datetime.utcnow()
-        if os.path.exists("log.txt"):
-            with open("log.txt", "a") as f:
-                f.write(time_now.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
-                f.write("\n")
-                f.close()
-        else:
-            with open("log.txt", "wb") as f:
-                f.write(time_now.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
-                f.write("\n")
-                f.close()
-
+        logging.info(td.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
+        logging.info("\n")
         clean_dict, clean, raw_title = clean_incoming()
         finial_title, length = sort_title(clean_dict, raw_title)
         while days < 31:
@@ -568,24 +591,48 @@ if __name__ == "__main__":
                     Pro = Province[ind]
                     results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
                     csv_out(results_list,ordered_titles,Pro + strdate, clean_dict, finial_title, length)
-                except:
+                except Exception, err:
+		    print str(err)
+		    logging.error(str(err))
                     WrongID.append(station)
                     continue
             days = days + 1
             
-        with open("log.txt","w") as f:
-            f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-            f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
-            f.write("\n")
-            f.close()
+        logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
+        logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+        f.write("\n")
+       
+    elif ARGS.mode == 'Specified':
+	
+	days = 0
+        start_time = ARGS.StartDate
+	end_time = ARGS.EndDate
+        logging.info(td.strftime("%Y%m%d   %H:%M")+" specified process starts, from " + start_time + " to " + end_time + "\n")
+        logging.info("\n")
+        clean_dict, clean, raw_title = clean_incoming()
+        finial_title, length = sort_title(clean_dict, raw_title)
 
+        while days <= (int(end_time) - int(start_time)):
+            
+            strdate  = int(start_time) + days
+            all_stations = get_stations_list(urlroot,str(strdate))
+            for station in all_stations:
+                try:
+                    ind = ID.index(str(station) + "\n")
+		    Pro = Province[ind]
+                    results_list, ordered_titles = parse_station(urlroot,str(strdate),station,clean_dict=clean_dict,clean=clean)
+                    csv_out(results_list,ordered_titles,Pro + str(strdate), clean_dict, finial_title, length)
+		    
+                except Exception, err:
+		    print str(err)
+		    logging.error(str(err))
+                    WrongID.append(station)
+                    continue
+            days = days + 1
 
-
-
-
-
-
-
+	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " Specified process ended\n")
+        logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+        
 
 
 
