@@ -21,6 +21,9 @@ See the 'main' section of this file for examples
 urlroot = "http://dd.weather.gc.ca/observations/swob-ml/"
 logging.basicConfig(filename = 'swob.log', filemode = 'a', level = logging.DEBUG)
 
+if not os.path.isfile("swob.log"):
+    open("swob.log",'w')
+
 def get_html_string(url):
     """
     Gets the html string from a url
@@ -399,7 +402,7 @@ def excel_out(data_list, titles_list, desired_filename, multi = False):
     except:
         return False
 
-def csv_out(results_list, ordered_titles, filename, clean_dict, finial_title, length):
+def csv_out(results_list, finial_title, filename):
     """
     Outputs data to a CSV file
     :param results_list: a list of station information in 
@@ -415,20 +418,18 @@ def csv_out(results_list, ordered_titles, filename, clean_dict, finial_title, le
     :returns: (bool) True if successful, False otherwise
     """
     try:
-        # Sanitizes the result information so it only inculdes the value
-        ordered_results_list = order_row(results_list, ordered_titles, clean_dict, length)
-            
+                   
         # Write the header and data to the csv file
         
 	if os.path.exists(filename):
             with open(filename, "a") as f:
                 writer = csv.writer(f)
-                writer.writerow(ordered_results_list)
+                writer.writerow(results_list)
         else:
             with open(filename, "wb") as f:
                 writer = csv.writer(f)
                 writer.writerow(finial_title)
-                writer.writerow(ordered_results_list)
+                writer.writerow(results_list)
 
         # We were successful
         return True
@@ -545,7 +546,7 @@ if __name__ == "__main__":
     if ARGS.mode == 'Hourly':
         print ("Hourly mode\n") 
 	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process started\n")
-	logging.info("\n")
+	
         time_now = datetime.datetime.utcnow()
         hr = time_now.strftime("%H" + "00")
         all_stations = get_stations_list(urlroot,strdate)
@@ -562,7 +563,8 @@ if __name__ == "__main__":
                 ind = ID.index(station + "\n")
                 Pro = Province[ind]
                 result_list, ordered_titles = parse_station_hourly(urlroot,strdate,str(hour),station,clean_dict=clean_dict,clean=clean)
-                csv_out(result_list,ordered_titles,Pro + strdate, clean_dict, finial_title, length)
+                ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
+                csv_out(ordered_results_list, finial_title, Pro + strdate)
             except Exception, err:
 		print str(err)
 		logging.error(str(err))
@@ -570,7 +572,7 @@ if __name__ == "__main__":
                 continue
         logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process finished\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-       
+        
         
     elif ARGS.mode == 'Initial':   
         
@@ -590,7 +592,8 @@ if __name__ == "__main__":
                     ind = ID.index(station + "\n") 
                     Pro = Province[ind]
                     results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
-                    csv_out(results_list,ordered_titles,Pro + strdate, clean_dict, finial_title, length)
+                    ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
+                    csv_out(ordered_results_list, finial_title, Pro + strdate)
                 except Exception, err:
 		    print str(err)
 		    logging.error(str(err))
@@ -600,7 +603,7 @@ if __name__ == "__main__":
             
         logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-        
+       
        
     elif ARGS.mode == 'Specified':
 	
@@ -621,8 +624,9 @@ if __name__ == "__main__":
                     ind = ID.index(str(station) + "\n")
 		    Pro = Province[ind]
                     results_list, ordered_titles = parse_station(urlroot,str(strdate),station,clean_dict=clean_dict,clean=clean)
-                    csv_out(results_list,ordered_titles,Pro + str(strdate), clean_dict, finial_title, length)
-		    
+		    ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
+                    csv_out(ordered_results_list, finial_title, Pro + strdate)
+    
                 except Exception, err:
 		    print str(err)
 		    logging.error(str(err))
