@@ -19,11 +19,12 @@ See the 'main' section of this file for examples
 """
 
 urlroot = "http://dd.weather.gc.ca/observations/swob-ml/"
-logging.basicConfig(filename = 'swob.log', filemode = 'a', level = logging.DEBUG)
+logging.basicConfig(filename = 'swob.log', format='[%(asctime)s] [%(levelname)s] line=%(lineno)s module=%(module)s function=%(funcName)s [%(message)s]', 
+    datefmt = '%a, %d %b %Y %H:%M:$S', level = logging.DEBUG)
 
 if not os.path.isfile("swob.log"):
-    open("swob.log",'w')
-
+    open("swob.log","w")
+    close("swob.log")
 def get_html_string(url):
     """
     Gets the html string from a url
@@ -38,7 +39,7 @@ def get_html_string(url):
             catcher=3
             return html_string
         except:
-	    lgging.error('Link retrieval error on:' + url)
+	    logging.error('Link retrieval error on:' + url)
             print "Link retrieval error on:"
             print url
             html_string = ""
@@ -147,7 +148,7 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
                 value = node.attrib.get('value')
                 uom   = unicode(node.attrib.get('uom')).encode('ascii','ignore')
                 order = counter
-                qual  = "qa_none"
+                qual  = ""
                 if name == "qa_summary":
                     qual = str(value)
                     single_xml_data[lastname][3] = qual
@@ -236,6 +237,7 @@ def parse_station_hourly(urlroot, strdate, hour,station, title_dict={}, clean_di
         if ".xml" and hour in tag['href']:
             file_name = tag['href'].encode('ascii','ignore')
             one_station_xml_links.append(file_name)
+
 
     one_station_data_list, ordered_titles = parse_xml_links(one_station_url, one_station_xml_links, title_dict=title_dict, clean_dict=clean_dict, clean=clean)
     
@@ -548,15 +550,15 @@ if __name__ == "__main__":
 	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process started\n")
 	
         time_now = datetime.datetime.utcnow()
-        hr = time_now.strftime("%H" + "00")
+        hr = time_now.strftime("%H")
         all_stations = get_stations_list(urlroot,strdate)
         clean_dict, clean, raw_title = clean_incoming()
         finial_title, length = sort_title(clean_dict, raw_title)
         hour = int(hr)
-        if hour == 0000:
-            hour = 2300
+        if hour == 00:
+            hour = 23
         else:
-            hour = hour - 100 
+            hour = hour - 1 
 
         for station in all_stations:
             try:
