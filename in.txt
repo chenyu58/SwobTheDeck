@@ -161,9 +161,4 @@ avg_globl_solr_radn_pst1hr, Past 1hour Average Global Solar Radition, 162
 tot_globl_solr_radn_pst1hr, Past 1hour Total Global solar Radition, 163
 air_temp_12hrs_ago, Past 12 hour air Temperature, 166
 avg_cum_pcpn_gag_wt_fltrd_mt55-60, avg_cum_pcpn_gag_wt_fltrd_mt55-60, 167
-product_swob-xml-2.0, product_swob-xml-2.0, 168
-MSC-DMS-PG-External-XML, MSC-DMS-PG-External-XML, 169
-msc/observation/atmospheric/surface_weather/ra-1.0-ascii, msc/observation/atmospheric/surface_weather/ra-1.0-ascii, 170
 data_prov, data_prov,171
-msc/observation/atmospheric/surface_weather/ca-1.0-ascii, msc/observation/atmospheric/surface_weather/ca-1.0-ascii, 172
-nav_canada/observation/atmospheric/surface_weather/awos-2.0-binary, nav_canada/observation/atmospheric/surface_weather/awos-2.0-binary, 173
