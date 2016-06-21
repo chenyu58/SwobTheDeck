@@ -38,9 +38,9 @@ def get_html_string(url):
             html_string = URLObj.read().decode('utf-8')
             catcher=3
             return html_string
-        except:
-	    logging.error('Link retrieval error on:' + url)
-            print "Link retrieval error on:"
+        except urllib2.URLError as err:
+	    logging.error(str(err) + ': ' + url)
+            print str(err)
             print url
             html_string = ""
             catcher+=1
@@ -136,10 +136,11 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
                 xml_file = urllib2.urlopen(link_base_url_root + xml_address)
                 xml_parser_obj = ElementTree.parse(xml_file)
                 catcher=3
-            except:
+            except urllib2.URLError as err:
                 catcher+=1
                 print "Error opening xmladdress" + xml_address
-                logging.error("Error opening xmladdress" + xml_address) 
+		print str(err)
+                logging.error(str(err) + ": " + xml_address) 
             lastname = ""
             single_xml_data = {}
             counter = 0
@@ -404,7 +405,7 @@ def excel_out(data_list, titles_list, desired_filename, multi = False):
     except:
         return False
 
-def csv_out(results_list, finial_title, filename):
+def csv_out(results_list, finial_title, filename, date):
     """
     Outputs data to a CSV file
     :param results_list: a list of station information in 
@@ -419,16 +420,17 @@ def csv_out(results_list, finial_title, filename):
     :param filename: (str) the name of the file to write the csv to
     :returns: (bool) True if successful, False otherwise
     """
+    
     try:
-                   
+        if not os.path.exists("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date)):
+	    os.makedirs("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date))           
         # Write the header and data to the csv file
-        
-	if os.path.exists(filename):
-            with open(filename, "a") as f:
+        if os.path.exists("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date) + "/" + str(filename) + ".csv"):
+            with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date) + "/" + str(filename) + ".csv", "a") as f:
                 writer = csv.writer(f)
                 writer.writerow(results_list)
         else:
-            with open(filename, "wb") as f:
+            with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date) + "/" + str(filename) + ".csv", "wb") as f:
                 writer = csv.writer(f)
                 writer.writerow(finial_title)
                 writer.writerow(results_list)
@@ -484,6 +486,30 @@ def order_row(row, ordered_titles, clean_dict, length):
         print str(err)
         print clean_dict.get(name[0])[1]
         return ordered_row
+
+def sort_by_station_name(date):
+    Pv = ["BC","AB","SK","MB","ON","QC","NB","NS","NL","PE","YT","NU","NT"]
+    strdate = date.strftime("%Y%m%d")
+    outputdate = date.strftime("%Y-%m-%d-")
+
+
+    for p in Pv:
+        unSortedList = []
+        SortedList = []
+        with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(strdate) + "/" + str(outputdate) + str(p) + ".csv", "r") as f:
+            read = csv.reader(f, delimiter = ",")
+	    header = read.next()
+            for row in read:
+                if "".join(row) == "":
+                    continue
+                unSortedList.append(row)
+            #print unSortedList
+            SortedList = sorted(unSortedList, key=itemgetter(2,0))
+
+        with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(strdate) + "/" + str(outputdate) + str(p) + ".csv", "w") as f:
+            writer = csv.writer(f)
+	    writer.writerow(header)
+            writer.writerows(SortedList)
 
 
 """
@@ -566,13 +592,15 @@ if __name__ == "__main__":
                 Pro = Province[ind]
                 result_list, ordered_titles = parse_station_hourly(urlroot,strdate,str(hour),station,clean_dict=clean_dict,clean=clean)
                 ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
-                csv_out(ordered_results_list, finial_title, Pro + strdate)
+		outputdate = time_now.strftime("%Y-%m-%d-")
+                csv_out(ordered_results_list, finial_title, outputdate+Pro, strdate)
             except Exception, err:
 		print str(err)
 		logging.error(str(err))
                 WrongID.append(station)
                 continue
-        logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process finished\n")
+        sort_by_station_name(time_now)
+	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process finished\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
         
         
@@ -595,14 +623,16 @@ if __name__ == "__main__":
                     Pro = Province[ind]
                     results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
                     ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
-                    csv_out(ordered_results_list, finial_title, Pro + strdate)
+		    outputdate = date.strftime("%Y-%m-%d-")
+                    csv_out(ordered_results_list, finial_title, outputdate+Pro, strdate)
+
                 except Exception, err:
 		    print str(err)
 		    logging.error(str(err))
                     WrongID.append(station)
                     continue
             days = days + 1
-            
+        sort_by_station_name(time_now)   
         logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
        
@@ -627,7 +657,7 @@ if __name__ == "__main__":
 		    Pro = Province[ind]
                     results_list, ordered_titles = parse_station(urlroot,str(strdate),station,clean_dict=clean_dict,clean=clean)
 		    ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
-                    csv_out(ordered_results_list, finial_title, Pro + strdate)
+                    csv_out(ordered_results_list, finial_title, Pro + strdate + " - " + end_time, start_time + " - " + end_time)
     
                 except Exception, err:
 		    print str(err)
@@ -635,7 +665,7 @@ if __name__ == "__main__":
                     WrongID.append(station)
                     continue
             days = days + 1
-
+          
 	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " Specified process ended\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
         
