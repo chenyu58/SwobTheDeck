@@ -40,7 +40,7 @@ def get_html_string(url):
             return html_string
         except urllib2.URLError as err:
 	    logging.error(str(err) + ': ' + url)
-            print str(err)
+            print "Link retrieval error on:"
             print url
             html_string = ""
             catcher+=1
@@ -103,11 +103,11 @@ def clean_incoming(clean_info_filename="in.txt"):
                 counter = counter + 2
 		title.append(line_data_list[0])
 	
-    except:
+    except Exception, err:
         clean = False
         if clean_info_filename != "OFF":
-	    logging.error("Can't read file passed to clean_incoming")
-            print "Can't read file passed to clean_incoming()"
+	    logging.error("Can't read file passed to clean_incoming: " + str(err))
+            print "Can't read file passed to clean_incoming(): " + str(err)
     
     return clean_info, clean, title
 
@@ -139,7 +139,6 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
             except urllib2.URLError as err:
                 catcher+=1
                 print "Error opening xmladdress" + xml_address
-		print str(err)
                 logging.error(str(err) + ": " + xml_address) 
             lastname = ""
             single_xml_data = {}
@@ -237,7 +236,8 @@ def parse_station_hourly(urlroot, strdate, hour,station, title_dict={}, clean_di
     for tag in one_station_soup.findAll('a', href=True):
         if ".xml" and hour in tag['href']:
             file_name = tag['href'].encode('ascii','ignore')
-            one_station_xml_links.append(file_name)
+            if file_name[11:13] == hour:
+                one_station_xml_links.append(file_name)
 
 
     one_station_data_list, ordered_titles = parse_xml_links(one_station_url, one_station_xml_links, title_dict=title_dict, clean_dict=clean_dict, clean=clean)
@@ -420,20 +420,40 @@ def csv_out(results_list, finial_title, filename, date):
     :param filename: (str) the name of the file to write the csv to
     :returns: (bool) True if successful, False otherwise
     """
-    
     try:
-        if not os.path.exists("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date)):
-	    os.makedirs("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date))           
+                   
         # Write the header and data to the csv file
-        if os.path.exists("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date) + "/" + str(filename) + ".csv"):
+        x = 0
+	if not os.path.exists("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date)):
+            os.makedirs("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date))
+ 
+	if os.path.exists("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date) + "/" + str(filename) + ".csv"):
             with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date) + "/" + str(filename) + ".csv", "a") as f:
-                writer = csv.writer(f)
-                writer.writerow(results_list)
+		writer = csv.writer(f)
+                while x < len(results_list):
+		    writer.writerow(results_list[x])
+		    x = x + 1
         else:
             with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(date) + "/" + str(filename) + ".csv", "wb") as f:
                 writer = csv.writer(f)
                 writer.writerow(finial_title)
-                writer.writerow(results_list)
+		while x < len(results_list):
+                    writer.writerow(results_list[x])
+		    x = x + 1
+	x = 0
+        if not os.path.exists("/apps/data/consolidated-swob/" + "Consolidated_Monthly_File.csv"):
+            with open("/apps/data/consolidated-swob/" + "Consolidated_Monthly_File.csv","w") as f:
+                writer = csv.writer(f)
+                writer.writerow(finial_title)
+                while x < len(results_list):
+                    writer.writerow(results_list[x])
+                    x = x + 1
+        else:
+            with open("/apps/data/consolidated-swob/" + "Consolidated_Monthly_File.csv","a") as f:
+                writer = csv.writer(f)
+                while x < len(results_list):
+                    writer.writerow(results_list[x])
+                    x = x + 1
 
         # We were successful
         return True
@@ -471,16 +491,22 @@ def order_row(row, ordered_titles, clean_dict, length):
     :returns: (list) a row as a list with just the data values as columns.  QA included
     """
     try:
+
+	final_ordered_row = []
+	x = 0
+	while x < len(row):      
+	    ordered_row = [""] * length * 2 
+	    for name in ordered_titles:
+	        if  clean_dict.get(name[0],[""]) != [""]:                
+                    if row[x].get(name[0],[""]) != [""]:
+		        ordered_row[clean_dict.get(name[0])[1]] = str(row[x].get(name[0])[0])
+		        ordered_row[clean_dict.get(name[0])[1] + 1] = str(row[x].get(name[0])[3])    
+	    
+	    final_ordered_row.append(ordered_row)
+	    
+	    x = x + 1
 	
-        ordered_row = [""] * length * 2
-        
-	for name in ordered_titles:
-	    if  clean_dict.get(name[0],[""]) != [""]:                
-                if row[0].get(name[0],[""]) != [""]:
-		    ordered_row[clean_dict.get(name[0])[1]] = str(row[0].get(name[0])[0])
-		    ordered_row[clean_dict.get(name[0])[1] + 1] = str(row[0].get(name[0])[3])
-        
-	return ordered_row
+	return final_ordered_row
     except Exception, err:
 	logging.error(str(err))
         print str(err)
@@ -489,28 +515,50 @@ def order_row(row, ordered_titles, clean_dict, length):
 
 def sort_by_station_name(date):
     Pv = ["BC","AB","SK","MB","ON","QC","NB","NS","NL","PE","YT","NU","NT"]
-    strdate = date.strftime("%Y%m%d")
     outputdate = date.strftime("%Y-%m-%d-")
-
-
+    Month = date.strftime("%Y-%B")
+    strdate = date.strftime("%Y%m%d")
+    one_day = datetime.timedelta(days=1)
+    past_date_str = int((date - 30*one_day).strftime("%Y%m%d"))
+    print past_date_str
     for p in Pv:
         unSortedList = []
-        SortedList = []
-        with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(strdate) + "/" + str(outputdate) + str(p) + ".csv", "r") as f:
-            read = csv.reader(f, delimiter = ",")
-	    header = read.next()
-            for row in read:
-                if "".join(row) == "":
-                    continue
-                unSortedList.append(row)
+	SortedList = []
+	with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(strdate) + "/" + str(outputdate) + str(p) + ".csv", "r") as f:
+	    read = csv.reader(f, delimiter = ",")
+	    title = read.next()
+	    for row in read:
+	        if "".join(row) == "":	
+		    continue
+	        unSortedList.append(row)
             #print unSortedList
-            SortedList = sorted(unSortedList, key=itemgetter(2,0))
+	    SortedList = sorted(unSortedList, key=itemgetter(2,0))
+	    
+	with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(strdate) + "/" + str(outputdate) + str(p) + ".csv", "w") as f:
+	    writer = csv.writer(f)
+	    writer.writerow(title)
+	    writer.writerows(SortedList)
+	
+	
+    with open("/apps/data/consolidated-swob/" + "Consolidated_Monthly_File.csv","r") as f:
+        data_read = csv.reader(f, delimiter = ",")
+        title = data_read.next()
+        Data_List = []
+        for row in data_read:
+            if "".join(row) == "":
+                continue
+            elif  int(row[0][0:10].replace('-','')) < past_date_str:
+                continue
+            else:
+                Data_List.append(row)
 
-        with open("/apps/data/outgoing/eccc/cmc/dmsec/swob-consolidated/" + str(strdate) + "/" + str(outputdate) + str(p) + ".csv", "w") as f:
-            writer = csv.writer(f)
-	    writer.writerow(header)
-            writer.writerows(SortedList)
-
+    with open("/apps/data/consolidated-swob/" + "Consolidated_Monthly_File.csv","w") as f:
+        writer = csv.writer(f)
+        writer.writerow(title)
+        x = 0
+        while x < len(Data_List):
+            writer.writerow(Data_List[x])
+            x = x + 1
 
 """
 Main Class
@@ -546,23 +594,23 @@ if __name__ == "__main__":
 
 
     ARGS = PARSER.parse_args()
-
-    #Mapping station to province list
-    f = open("mapfile.csv","r");
-    ID = []
-    Province = []
-    f.readline()
-    WrongID = [] 
-    while True:
-        line = f.readline()
-        if line == '\n':
-            break;
-        parts = line.split(",")
-        if parts[3] == '\n':
-            continue
-        ID.append(parts[3])
-        Province.append(parts[1])
     
+    #Mapping station to province list
+    with open("mapfile.csv","r") as f:
+        ID = []
+        Province = []
+        f.readline()
+        WrongID = [] 
+        while True:
+            line = f.readline()
+            if line == '\n':
+                break;
+            parts = line.split(",")
+            if parts[3] == '\n':
+                continue
+            ID.append(parts[3])
+            Province.append(parts[1])
+
     #get today's date and time
     td = datetime.datetime.utcnow()
     one_day = datetime.timedelta(days=1)
@@ -591,9 +639,9 @@ if __name__ == "__main__":
                 ind = ID.index(station + "\n")
                 Pro = Province[ind]
                 result_list, ordered_titles = parse_station_hourly(urlroot,strdate,str(hour),station,clean_dict=clean_dict,clean=clean)
-                ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
-		outputdate = time_now.strftime("%Y-%m-%d-")
-                csv_out(ordered_results_list, finial_title, outputdate+Pro, strdate)
+		ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
+		outputdate = td.strftime("%Y-%m-%d")
+                csv_out(ordered_results_list, finial_title, outputdate+"-"+Pro, strdate)
             except Exception, err:
 		print str(err)
 		logging.error(str(err))
@@ -606,13 +654,13 @@ if __name__ == "__main__":
         
     elif ARGS.mode == 'Initial':   
         
-	days = 1
+	days = 30
         time_now = datetime.datetime.utcnow()
         logging.info(td.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
         logging.info("\n")
         clean_dict, clean, raw_title = clean_incoming()
         finial_title, length = sort_title(clean_dict, raw_title)
-        while days < 31:
+        while days > 0:
             print days
             date  = td - days*one_day
             strdate = date.strftime("%Y%m%d")
@@ -621,18 +669,17 @@ if __name__ == "__main__":
                 try:
                     ind = ID.index(station + "\n") 
                     Pro = Province[ind]
-                    results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
-                    ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
-		    outputdate = date.strftime("%Y-%m-%d-")
-                    csv_out(ordered_results_list, finial_title, outputdate+Pro, strdate)
-
+                    result_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
+		    ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length) 
+		    outputdate = date.strftime("%Y-%m-%d")
+                    csv_out(ordered_results_list, finial_title, outputdate+"-"+Pro, strdate)
                 except Exception, err:
 		    print str(err)
 		    logging.error(str(err))
                     WrongID.append(station)
                     continue
-            days = days + 1
-        sort_by_station_name(time_now)   
+            days = days - 1
+            sort_by_station_name(date)    
         logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
        
@@ -649,15 +696,16 @@ if __name__ == "__main__":
 
         while days <= (int(end_time) - int(start_time)):
             
-            strdate  = int(start_time) + days
+            date  = str(int(start_time) + days)
             all_stations = get_stations_list(urlroot,str(strdate))
             for station in all_stations:
                 try:
                     ind = ID.index(str(station) + "\n")
 		    Pro = Province[ind]
-                    results_list, ordered_titles = parse_station(urlroot,str(strdate),station,clean_dict=clean_dict,clean=clean)
-		    ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
-                    csv_out(ordered_results_list, finial_title, Pro + strdate + " - " + end_time, start_time + " - " + end_time)
+                    results_list, ordered_titles = parse_station(urlroot,str(date),station,clean_dict=clean_dict,clean=clean)
+		    ordered_results_list = order_row(results_list, ordered_titles, clean_dict, length)
+                    outputdate = date[0:4]+'-'+date[4:6]+'-'+date[6:]
+                    csv_out(ordered_results_list, finial_title, outputdate+'-'+Pro, date)
     
                 except Exception, err:
 		    print str(err)
@@ -665,10 +713,11 @@ if __name__ == "__main__":
                     WrongID.append(station)
                     continue
             days = days + 1
-          
+
 	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " Specified process ended\n")
         logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
         
-
-
-
+    
+             
+    
+    

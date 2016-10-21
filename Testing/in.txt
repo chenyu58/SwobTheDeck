@@ -1,0 +1,163 @@
+long, Longitude
+lat, Latitude
+stn_elev, Station Height
+stn_typ, Station Type
+rpt_typ, Report Type
+icao_stn_id, ICAO Station Identifier
+msc_id, MSC Identifier
+cor, Correction
+tot_cld_opcty, Total Cloud Opacity
+tot_cld_amt, Total Cloud Amount
+cld_bas_hgt_1, Cloud Height for Layer 1
+cld_bas_hgt_2, Cloud Height for Layer 2
+cld_bas_hgt_3, Cloud Height for Layer 3
+cld_bas_hgt_4, Cloud Height for Layer 4
+cld_bas_hgt_5, Cloud Height for Layer 5
+cld_bas_hgt_6, Cloud Height for Layer 6
+cld_cvr_1, Cloud Cover Layer 1
+cld_cvr_2, Cloud Cover Layer 2
+cld_cvr_3, Cloud Cover Layer 3
+cld_cvr_4, Cloud Cover Layer 4
+cld_cvr_5, Cloud Cover Layer 5
+cld_cvr_6, Cloud Cover Layer 6
+cld_amt_code_1, Cumulative Cloud Amount Layer 1
+cld_amt_code_2, Cumulative Cloud Amount Layer 2
+cld_amt_code_3, Cumulative Cloud Amount Layer 3
+cld_amt_code_4, Cumulative Cloud Amount Layer 4
+cld_amt_code_5, Cumulative Cloud Amount Layer 5
+cld_amt_code_6, Cumulative Cloud Amount Layer 6
+sum_cld_cvr_1, Summation Cloud Cover Layer 1
+sum_cld_cvr_2, Summation Cloud Cover Layer 1
+sum_cld_cvr_3, Summation Cloud Cover Layer 1
+sum_cld_cvr_4, Summation Cloud Cover Layer 1
+sum_cld_cvr_5, Summation Cloud Cover Layer 1
+sum_cld_cvr_6, Summation Cloud Cover Layer 1
+cld_typ_1, Cloud Type Layer 1
+cld_typ_2, Cloud Type Layer 2
+cld_typ_3, Cloud Type Layer 3
+cld_typ_4, Cloud Type Layer 4
+cld_typ_5, Cloud Type Layer 5
+cld_typ_6, Cloud Type Layer 6
+cld_opcty_1, Cloud Opacity Layer 1
+cld_opcty_2, Cloud Opacity Layer 2
+cld_opcty_3, Cloud Opacity Layer 3
+cld_opcty_4, Cloud Opacity Layer 4
+cld_opcty_5, Cloud Opacity Layer 5
+cld_opcty_6, Cloud Opacity Layer 6
+clg_typ, Ceiling Type
+clg_typ_1, Ceiling type Layer 1
+clg_typ_2, Ceiling type Layer 2
+clg_typ_3, Ceiling type Layer 3
+clg_typ_4, Ceiling type Layer 4
+clg_typ_5, Ceiling type Layer 5
+clg_typ_6, Ceiling type Layer 7
+clg_hgt, Ceiling Height
+prsnt_wx, Present Weather
+prsnt_wx_1, Present Weather 1
+prsnt_wx_2, Present Weather 2
+prsnt_wx_3, Present Weather 3
+prsnt_wx_4, Present Weather 4
+prsnt_wx_5, Present Weather 5
+prsnt_wx_6, Present Weather 6
+recnt_wx_1, Recent Weather 1
+recnt_wx_2, Recent Weather 2
+recnt_wx_3, Recent Weather 3
+recnt_wx_4, Recent Weather 4
+recnt_wx_5, Recent Weather 5
+recnt_wx_6, Recent Weather 6
+stn_pres, Station Pressure
+mslp, Mean Seal Level Pressure
+pres_tend_amt_pst3hrs, Past 3-hour Differential Pressure Change Amount
+pres_tend_char_pst3hrs, Past 3-hour Trend Pressure Tendency Characteristic
+avg_wnd_dir_10m_mt58-60, 2 min Vectoral Average 10m Wind Direction
+avg_wnd_spd_10m_mt58-60, 2 min Average 10m Wind Speed
+avg_wnd_spd_10m_mt50-60, 10 min Average 10m Wind Speed
+wnd_gst_char_10m_mt50-60, 10 min Wind Gust Character
+max_wnd_gst_spd_10m_mt50-60, 10 min Maximum 10m Wind Gust Speed
+avg_wnd_spd_10m_pst1hr, Past 1hour Average 10m Wind Speed
+avg_wnd_dir_10m_pst1hr, Past 1hour Vector Average 10m Wind Direction
+max_wnd_spd_10m_mt50-60,10min Maximum 10m Wind Speed
+wnd_dir_10m_mt50-60_max_spd, Instantaneous 10m Wind Direction for Maximum 10min Wind Speed
+max_wnd_spd_10m_pst1hr, 1hour Maximum 10m Wind Speed
+wnd_dir_10m_pst1hr_max_spd, Instantaneous 10m Wind Direction for Maximum Hourly Wind Speed
+max_wnd_spd_10m_pst1hr_tm, Time of Maximum Hourly 10m Wind Speed
+avg_wnd_dir_10m_mt50-60, 10 min Vectoral Average 10m Wind Direction
+avg_wnd_spd_10m_mt50-60, 10 min Average 10m, Wind Speed
+wnd_dir_10m_pst1hr_pk_spd, Past 1hour peak 10m Wind Speed Directon
+max_pk_wnd_spd_10m_pst1hr, Past 1hour Peak 10m Wind Speed
+wnd_dir_10m_pst24hrs_pk_spd, Wind Direction associated With The Past 24hour Peak Wind Speed
+max_pk_wnd_spd_10m_pst24hrs, Past 24hours Maximum peak 10m Wind Speed
+wnd_dir_10m_pst1hr_max_spd, Past 1hour Maximum 10m Wind Speed Direction
+max_wnd_spd_10m_pst1hr, Past 1hour Maximum 10m Wind Speed
+avg_wnd_spd_pcpn_gag_mt50-60, 10min Average Wind Speed At the Height of Precipitation Gauge
+rel_hun, Relative Humidity
+max_rel_hum_pst1hr, Past 1 hour Maximum Relative Humidity
+min_rel_hum_pst1hr, Past 1 hour Minimum Relative Humidity
+avg_rel_hum_pst1hr, Past 1 hour Average Relative Humidity
+max_vis, Maximum Horizontal Visibility
+min_vis, Minimum Horizontal Visibility
+vert_vis, Vertical Visibility
+vis, Horizontal Visibility
+min_vis_mt50-60, 10min Minimum Horizontal Visibility
+max_vis_mt50-60, 10min Maximum Horizontal Visibility
+max_vis_pst1hr, Past 1hour Maximum Horizontal Visibility
+max_vis_mt50-60, 10min maximum Horizontal Visibility
+min_vis_mt50-60, 10min Minimum Horizontal Visibility
+air_temp, Air Temperature
+dwpt_temp, Dew Point Temperature
+air_temp_1, Air Temperature 1
+air_temp_2, Air Temperature 2
+air_temp_3, Air Temperature 3
+air_temp_4, Air Temperature 4
+air_temp_5, Air Temperature 5
+air_temp_6, Air Temperature 6
+avg_air_temp_pst1hr, Past 1 hour Average Air Temperature
+max_air_temp_pst1hr, Past 1 hour Maximum Air Temperature
+min_air_temp_pst1hr, Past 1 hour Minimum Air Temperature
+max_air_temp_pst6hrs, Past 6 hours Maximum Air Temperature
+min_air_temp_pst6hrs, Past 6 hours Minimum Air Temperature
+air_temp_12hrs_ago, Past 12 hour air Temperature
+max_air_temp_pst24hrs, Past 24 hours Maximum Air Temperature
+min_air_temp_pst24hrs, Past 24 hours Minimum Air Temperature
+min_air_temp_pst1hr, Past 1hour Minimun Air Temperature
+max_air_temp_pst1hr, Past 1hour Maximum Air Temperature
+max_air_temp_pst6hrs, Past 6hour Maximum air Temperature
+min_air_temp_pst6hrs, Past 6hour Minimum Air Temperature
+max_air_temp_pst24hrs, Past 24hour Maximum Air Temperature
+min_air_temp_pst24hrs, Past 24hour Minimun Air Temperature
+logr_panl_temp, Datalogger Panel Temperature
+pcpn_gag_wt_fltrd, Gauge Weight Filtered
+pcpn_amt_pst1hr, 1hour Precipitation Amount
+pres_tend_amt_pst1hr, Past 1hour Differential Pressure Tendency Amount
+pcpn_amt_pst3hrs, Derived Past 3hours Accumulated Precipitation Amount
+pcpn_amt_pst6hrs, Derived Past 6hours Accumulated Precipitation AMount
+pcpn_amt_pst24hrs, Derived Past 24hours Accumulated Precipitation Amountm
+pcpn_snc_last_syno_hr, Precipitation Since Last Synoptic Hour
+rnfl_snc_last_syno_hr, Rainfall Since Last Synoptic Hour
+rnfl_amt_pst1hr, Past 1 hour Rainfall Amount
+avg_cum_pcpn_gag_wt_fltrd_55-60, 5min Cumulative Precipitation Gauge Weight
+data_pvdr, Data Provider
+data_attrib_not, Data Attribution Notice
+snw_dpth, Snow Depth
+snw_dpth_1, 5min Average Snow Depth 1
+snw_dpth_2, 5min Average Snow Depth 2
+snw_dpth_3, 5min Average Snow Depth 3
+snw_dpth_4, 5min Average Snow Depth 4
+snw_dpth_5, 5min Average Snow Depth 5
+snw_dpth_6, 5min Average Snow Depth 6
+avg_snw_dpth_pst1hr, Past 1hour Average Snow Depth
+data_avail, Data Availability
+max_batry_volt_pst1hr, Past 1hour Maximum Battery Voltage
+min_batry_volt_pst1hr, Past 1hour Minimum Battery Voltage
+hdr_fwd_pwr, HDR trasmitter forward power
+hdr_refltd_pwr, HDR transmitter reflected power
+hdr_suply_volt, HDR transmitter supply voltage
+hdr_oscil_drft, HDR transmitter oscillator drift
+avg_uvb_indx_pst1hr, 5-minute Average UVB Index in Past 1hour
+avg_globl_solr_radn_pst1hr, Past 1hour Average Global Solar Radiation
+tot_globl_solr_radn_pst1hr, Past 1hour Total Global solar Radiation
+avg_cum_pcpn_gag_wt_fltrd_mt55-60, avg_cum_pcpn_gag_wt_fltrd_mt55-60
+data_prov, data_prov
+pk_wnd_rmk, Derived Peak Wind Remark
+rmk, Remark
+altmetr_setng, Altimeter Setting

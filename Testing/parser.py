@@ -8,6 +8,8 @@ import copy
 import sys
 import csv
 import os
+import logging 
+import argparse
 
 """
 These functions are used to collect SWOB-ML data from the Environment Canada
@@ -17,7 +19,12 @@ See the 'main' section of this file for examples
 """
 
 urlroot = "http://dd.weather.gc.ca/observations/swob-ml/"
+logging.basicConfig(filename = 'swob.log', format='[%(asctime)s] [%(levelname)s] line=%(lineno)s module=%(module)s function=%(funcName)s [%(message)s]', 
+    datefmt = '%a, %d %b %Y %H:%M:$S', level = logging.DEBUG)
 
+if not os.path.isfile("swob.log"):
+    open("swob.log","w")
+    close("swob.log")
 def get_html_string(url):
     """
     Gets the html string from a url
@@ -31,7 +38,8 @@ def get_html_string(url):
             html_string = URLObj.read().decode('utf-8')
             catcher=3
             return html_string
-        except:
+        except urllib2.URLError as err:
+	    logging.error(str(err) + ': ' + url)
             print "Link retrieval error on:"
             print url
             html_string = ""
@@ -61,7 +69,7 @@ def get_stations_list(urlroot, strdate):
     
     return all_stations_list
 
-def clean_incoming(clean_info_filename="in.txt", default_order=500):
+def clean_incoming(clean_info_filename="in.txt"):
     """
     Creates an index from which to sort data.  Indexable by field_name and includes whether or not to override
     field_name with a human specified readable field name and desired order.
@@ -81,18 +89,27 @@ def clean_incoming(clean_info_filename="in.txt", default_order=500):
         clean_info = {}
         clean_info_file_obj = file(clean_info_filename,'rb')
         split = csv.reader(clean_info_file_obj, delimiter=',', skipinitialspace=True)
+        clean_info["date_tm"] = ["Date and Time", 0]
+        clean_info["stn_nam"] = ["Station Name", 2]
+        clean_info["tc_id"] = ["TC Indentifier", 4]
+	clean_info["wmo_synop_id"] = ["WMO Synoptic Identifier", 6]
+	clean_info["clim_id"] = ["Climate Identifier", 8]
+	counter = 10
+	title = ["date_tm","stn_nam","tc_id","wmo_synop_id","clim_id"] 
         for line_data_list in split:
             if line_data_list.__len__()<=3:
                 clean = True
-                line_data_list.append(default_order)
-                clean_info[line_data_list[0]]=[line_data_list[1],line_data_list[2]]
-                
-    except:
+                clean_info[line_data_list[0]]=[line_data_list[1],counter]
+                counter = counter + 2
+		title.append(line_data_list[0])
+	
+    except Exception, err:
         clean = False
         if clean_info_filename != "OFF":
-            print "Can't read file passed to clean_incoming()"
+	    logging.error("Can't read file passed to clean_incoming: " + str(err))
+            print "Can't read file passed to clean_incoming(): " + str(err)
     
-    return clean_info, clean
+    return clean_info, clean, title
 
 def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={}, clean=False, default_order=500):
     """
@@ -119,27 +136,27 @@ def parse_xml_links(link_base_url_root, xml_links, title_dict={}, clean_dict={},
                 xml_file = urllib2.urlopen(link_base_url_root + xml_address)
                 xml_parser_obj = ElementTree.parse(xml_file)
                 catcher=3
-            except:
+            except urllib2.URLError as err:
                 catcher+=1
                 print "Error opening xmladdress" + xml_address
-                
+                logging.error(str(err) + ": " + xml_address) 
             lastname = ""
             single_xml_data = {}
+            counter = 0
             for node in xml_parser_obj.getiterator():
                 name  = node.attrib.get('name')
                 value = node.attrib.get('value')
                 uom   = unicode(node.attrib.get('uom')).encode('ascii','ignore')
-                order = int(default_order)
-                qual  = "qa_none"
+                order = counter
+                qual  = ""
                 if name == "qa_summary":
                     qual = str(value)
                     single_xml_data[lastname][3] = qual
                 else:
                     if clean == True:
                         try:
-                            order = int(clean_dict[name][1])
-                            # Modify name last (lookups depend on it)
-                            name = clean_dict[name][0]
+                            order = counter
+                            counter = counter + 1
                         except:
                             pass
                         
@@ -219,66 +236,13 @@ def parse_station_hourly(urlroot, strdate, hour,station, title_dict={}, clean_di
     for tag in one_station_soup.findAll('a', href=True):
         if ".xml" and hour in tag['href']:
             file_name = tag['href'].encode('ascii','ignore')
-            one_station_xml_links.append(file_name)
+            if file_name[11:13] == hour:
+                one_station_xml_links.append(file_name)
+
 
     one_station_data_list, ordered_titles = parse_xml_links(one_station_url, one_station_xml_links, title_dict=title_dict, clean_dict=clean_dict, clean=clean)
-
+    
     return one_station_data_list, ordered_titles
-
-def order_row(row, ordered_titles):
-    """
-    Orders an individual row so that it follows the field order of ordered_titles
-    :param row: a dict from the results_list
-    :param ordered_titles: a list of field title tuples ordered by priority in
-        [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
-        where each tuple in the list is used to order the data in results_list and for the header data.
-    :returns: (list) a row as a list with just the data values as columns.  No units or qualifiers are included.
-    """
-    try:
-        ordered_row = []
-        for name in ordered_titles:
-            ordered_row.append(str(row.get(name[0],[""])[0]))
-	    #print row.get(name[0])
-            if row.get(name[0],[""]) != [""]:
-		ordered_row.append(str(row.get(name[0],[""])[3]))      
-    	    #ordered_row.append(str(row.get(name[0],[""])[3])) 
-        return ordered_row
-    except Exception, err:
-        print str(err)
-        print row.get(name[0],[""])
-	return ordered_row
-
-
-def order_results(results_list, ordered_titles):
-    """
-    Orders list results so that they follow the field order of ordered_titles
-    :param results_list: a list of station information in 
-        [{'fieldx_name':["datum","unit",(int) order,"quality"],'fieldx+1_name':[...]},{...},...] format
-        where each dictionary in the list gets rendered as a row
-    :param ordered_titles: a list of field title tuples ordered by priority in
-        [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
-        where each tuple in the list is used to order the data in results_list and for the header data. 
-    :returns: (list) results from input ordered in order of ordered_titles and with only the value as the field
-    """
-    results = []   
-    for row in results_list:
-        results.append(order_row(row, ordered_titles))
-   
-    return results
-
-def finalize_titles(ordered_titles):
-    """
-    Clean title information for ["Title (unit)",...] format
-    :param ordered_titles: a list of field title tuples ordered by priority in
-        [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
-        where each tuple in the list is used to order the data in results_list and for the header data.
-    :returns: (list) of str in "Title (unit)" format for use in headers
-    """
-    titles = []
-    for title in ordered_titles:
-        titles.append(str(title[0]) + " (" + str(title[1][1]) + ")")
-        titles.append("QA Summary (unitless)")
-    return titles
 
 def get_fonts():
     """
@@ -441,7 +405,7 @@ def excel_out(data_list, titles_list, desired_filename, multi = False):
     except:
         return False
 
-def csv_out(results_list, ordered_titles, filename):
+def csv_out(results_list, finial_title, filename):
     """
     Outputs data to a CSV file
     :param results_list: a list of station information in 
@@ -450,157 +414,309 @@ def csv_out(results_list, ordered_titles, filename):
     :param ordered_titles: a list of field title tuples ordered by priority in
         [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
         where each tuple in the list is used to order the data in results_list and for the header data.
+    :param clean_dict: a dict that used to store the assigned index of given element
+    :param finial_title: a list contain the all the titles that are ready to be printed to output file
+    :length: a int is half of the total length of finial_title
     :param filename: (str) the name of the file to write the csv to
     :returns: (bool) True if successful, False otherwise
     """
     try:
-        # Sanitizes the result information so it only inculdes the value
-        ordered_results_list = order_results(results_list, ordered_titles)
-        # Orders the titles into a string list so it can be added to a csv
-        ordered_titles_list = finalize_titles(ordered_titles)
-        #print ordered_results_list    
+                   
         # Write the header and data to the csv file
-        if os.path.exists(filename):
-            with open(filename, "a") as f:
-                writer = csv.writer(f)
-                writer.writerows(ordered_results_list)
+        x = 0
+	 
+	if os.path.exists(filename + ".csv"):
+            with open(filename + ".csv", "a") as f:
+		writer = csv.writer(f)
+                while x < len(results_list):
+		    writer.writerow(results_list[x])
+		    x = x + 1
         else:
-            with open(filename, "wb") as f:
+            with open(filename + ".csv", "wb") as f:
                 writer = csv.writer(f)
-                writer.writerow(ordered_titles_list)
-                writer.writerows(ordered_results_list)
+                writer.writerow(finial_title)
+		while x < len(results_list):
+                    writer.writerow(results_list[x])
+		    x = x + 1
+	x = 0
+	if not os.path.exists("Consolidated_Monthly_File.csv"):
+	    with open("Consolidated_Monthly_File.csv","w") as f:
+		writer = csv.writer(f)
+		writer.writerow(finial_title)
+		while x < len(results_list):
+                    writer.writerow(results_list[x])
+                    x = x + 1
+        else:
+	    with open("Consolidated_Monthly_File.csv","a") as f:
+	        writer = csv.writer(f)
+	        while x < len(results_list):
+                    writer.writerow(results_list[x])
+                    x = x + 1
 
         # We were successful
         return True
     except Exception, err:
         #print str(err)
+	logging.error(str(err))
         # An error occurred
         return False
 
 
+def sort_title(clean_dict, title):
+    """
+    :param clean_dict: a dict contains the readable and original element name, and a number represent the index of this element in a output list
+    :param title: a list contain all keys of clean_dict
+    return: list of finial title, and half of the length of the list
+    """
+    finial_title = []
+    
+    for element in title:
+	#print clean_dict.get(element)[1]
+	finial_title.insert(clean_dict.get(element)[1],clean_dict.get(element)[0])
+	finial_title.insert(clean_dict.get(element)[1] + 1, "QA Summary")
+    
+    return finial_title, len(title)
+
+def order_row(row, ordered_titles, clean_dict, length):
+    """
+    Orders an individual row so that it follows the field order of ordered_titles
+    :param row: results_list
+    :param ordered_titles: a list of field title tuples ordered by priority in
+        [("fieldx_name", [(int) priority, "unit"]), ("fieldx+1_name", [(int) priority, "unit"]),...] format
+        where each tuple in the list is used to order the data in results_list and for the header data.
+    :param clean_dict: dict used to match readable and original name
+    :param length: a int used to determine the length of output list
+    :returns: (list) a row as a list with just the data values as columns.  QA included
+    """
+    try:
+
+	final_ordered_row = []
+	x = 0
+	while x < len(row):      
+	    ordered_row = [""] * length * 2 
+	    for name in ordered_titles:
+	        if  clean_dict.get(name[0],[""]) != [""]:                
+                    if row[x].get(name[0],[""]) != [""]:
+		        ordered_row[clean_dict.get(name[0])[1]] = str(row[x].get(name[0])[0])
+		        ordered_row[clean_dict.get(name[0])[1] + 1] = str(row[x].get(name[0])[3])    
+	    
+	    final_ordered_row.append(ordered_row)
+	    
+	    x = x + 1
+	
+	return final_ordered_row
+    except Exception, err:
+	logging.error(str(err))
+        print str(err)
+        print clean_dict.get(name[0])[1]
+        return ordered_row
+
+def sort_by_station_name(date):
+    Pv = ["BC","AB","SK","MB","ON","QC","NB","NS","NL","PE","YT","NU","NT"]
+    strdate = date.strftime("%Y-%m-%d")
+    Month = date.strftime("%Y-%B")
+    one_day = datetime.timedelta(days=1)
+    current_date = datetime.datetime.utcnow()
+    past_date = current_date - one_day*30
+    past_date_str = past_date.strftime("%Y-%m-%d")
+    Data_List = []
+
+    for p in Pv:
+        unSortedList = []
+	SortedList = []
+	with open(str(strdate) + "-" + str(p) + ".csv", "r") as f:
+	    read = csv.reader(f, delimiter = ",")
+	    title = read.next()
+	    for row in read:
+	        if "".join(row) == "":	
+		    continue
+	        unSortedList.append(row)
+            #print unSortedList
+	    SortedList = sorted(unSortedList, key=itemgetter(2,0))
+	    
+	with open(str(strdate) + "-" + str(p) + ".csv", "w") as f:
+	    writer = csv.writer(f)
+	    writer.writerow(title)
+	    writer.writerows(SortedList)
+	
+    with open("Consolidated_Monthly_File.csv","r") as f:
+        data_read = csv.reader(f, delimiter = ",")
+        title = data_read.next()
+ 	 
+        for row in data_read:
+
+	    if "".join(row) == "":
+                continue
+	    elif past_date_str in row[0]:
+	        continue
+	    else:
+                Data_List.append(row)
+	
+    with open("Consolidated_Monthly_File.csv","w") as f:
+        writer = csv.writer(f)
+        writer.writerow(title)
+        x = 0
+        while x < len(Data_List):
+            writer.writerow(Data_List[x])
+            x = x + 1
+ 
 """
-A collection of examples on how to use these functions
+Main Class
 """
 if __name__ == "__main__":
-    """ Old source code:   
-    # Specify the date in YYYYMMDD format.
-    # Here we get the current ZULU date in YYYYMMDD format.
-    strdate = datetime.datetime.utcnow().strftime("%Y%m%d")
-    # Example of how to get all stations.
-    all_stations = get_stations_list(urlroot, strdate)
-    # Get the rules for cleaning and sorting output files.
-    clean_dict, clean = clean_incoming()
-    # Parse the data for a station.  "VSL" is used in this example.
-    results_list, ordered_titles = parse_station(urlroot, strdate, "VSL", clean_dict=clean_dict, clean=clean)
     
-    # Example of how to output data to Excel and CSV formats.
-    excel_out(results_list, ordered_titles, "output.xls")
-    csv_out(results_list, ordered_titles, "output.csv")
-    """
+    PARSER = \
+        argparse.ArgumentParser(description = 'Swob XML to CSV.')
 
-    """Mapping station to province list"""
-    f = open("mapfile.csv","r");
-    ID = []
-    Province = []
-    f.readline()
-    WrongID = [] 
-    while True:
-        line = f.readline()
-        if line == '\n':
-            break;
-        parts = line.split(",")
-        if parts[3] == '\n':
-            continue
-        ID.append(parts[3])
-        Province.append(parts[1])
+    PARSER.add_argument(
+        '--mode',
+        help = 'Execution mode',
+        required = True,
+        choices = (
+            'Hourly',
+            'Initial',
+            'Specified'
+        )
+    )
+
+    PARSER.add_argument(
+        '--StartDate',
+        help = 'Choose Starting Date if using Specified Execition Mode. Format: YYYYMMDD',
+        required = False
+    )
+
+    PARSER.add_argument(
+        '--EndDate',
+        help = 'Choose Finishing Date if using Specified Execition Mode. Format: YYYYMMDD',
+        required = False
+    )
+
+
+
+    ARGS = PARSER.parse_args()
     
-    """get today's date and time"""
-    td = datetime.date.today()
+    #Mapping station to province list
+    with open("mapfile.csv","r") as f:
+        ID = []
+        Province = []
+        f.readline()
+        WrongID = [] 
+        while True:
+            line = f.readline()
+            if line == '\n':
+                break;
+            parts = line.split(",")
+            if parts[3] == '\n':
+                continue
+            ID.append(parts[3])
+            Province.append(parts[1])
+        f.close()
+    #get today's date and time
+    td = datetime.datetime.utcnow()
     one_day = datetime.timedelta(days=1)
-    days = 1
     strdate = td.strftime("%Y%m%d")
     
     """Check for running for condition, if flag.txt does not exit, progrom will perform a initial run 
     to consolidate data from the past 30 days, then create the flag.txt file.
     If flag.txt exist, program will directly enter hourly mode to consolidate data every hour"""
-    if os.path.exists("flag.txt"):
+    if ARGS.mode == 'Hourly':
         print ("Hourly mode\n") 
+	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process started\n")
+	
         time_now = datetime.datetime.utcnow()
-        hr = time_now.strftime("%H" + "00")
+        hr = time_now.strftime("%H")
         all_stations = get_stations_list(urlroot,strdate)
-        clean_dict, clean = clean_incoming()
+        clean_dict, clean, raw_title = clean_incoming()
+        finial_title, length = sort_title(clean_dict, raw_title)
         hour = int(hr)
-        if hour == 0000:
-            hour = 2300
+        if hour == 00:
+            hour = 23
         else:
-            hour = hour - 100 
+            hour = hour - 1 
 
         for station in all_stations:
             try:
                 ind = ID.index(station + "\n")
                 Pro = Province[ind]
                 result_list, ordered_titles = parse_station_hourly(urlroot,strdate,str(hour),station,clean_dict=clean_dict,clean=clean)
-                csv_out(result_list,ordered_titles,Pro + strdate)
-            except:
+		ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
+		outputdate = td.strftime("%Y-%m-%d")
+                csv_out(ordered_results_list, finial_title, outputdate+"-"+Pro)
+            except Exception, err:
+		print str(err)
+		logging.error(str(err))
                 WrongID.append(station)
                 continue
-        if os.path.exists("log.txt"):
-            with open("log.txt", "a") as f:
-                f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" process finished\n")
-                f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-                f.write("\n")
-                f.close()
-        else:
-            with open("log.txt", "wb") as f:
-                f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" process finished\n")
-                f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-                f.write("\n")
-                f.close()
-    else:   
-        with open("flag.txt", "w") as f:
-            f.close()
+        sort_by_station_name(time_now)
+	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M")+" Hourly process finished\n")
+        logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+        
+        
+    elif ARGS.mode == 'Initial':   
+        
+	days = 30
         time_now = datetime.datetime.utcnow()
-        if os.path.exists("log.txt"):
-            with open("log.txt", "a") as f:
-                f.write(time_now.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
-                f.write("\n")
-                f.close()
-        else:
-            with open("log.txt", "wb") as f:
-                f.write(time_now.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
-                f.write("\n")
-                f.close()
-
-        while days < 31:
+        logging.info(td.strftime("%Y%m%d   %H:%M")+" initial process starts\n")
+        logging.info("\n")
+        clean_dict, clean, raw_title = clean_incoming()
+        finial_title, length = sort_title(clean_dict, raw_title)
+        while days > 0:
             print days
             date  = td - days*one_day
             strdate = date.strftime("%Y%m%d")
             all_stations = get_stations_list(urlroot,strdate)
-            clean_dict, clean = clean_incoming()
             for station in all_stations:
                 try:
                     ind = ID.index(station + "\n") 
                     Pro = Province[ind]
-                    results_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
-                    csv_out(results_list,ordered_titles,Pro + strdate)
-                except:
+                    result_list, ordered_titles = parse_station(urlroot,strdate,station,clean_dict=clean_dict,clean=clean)
+		    ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length) 
+		    outputdate = date.strftime("%Y-%m-%d")
+                    csv_out(ordered_results_list, finial_title, outputdate+"-"+Pro)
+                except Exception, err:
+		    print str(err)
+		    logging.error(str(err))
+                    WrongID.append(station)
+                    continue
+            days = days - 1
+            sort_by_station_name(date)    
+        logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
+        logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+       
+       
+    elif ARGS.mode == 'Specified':
+	
+	days = 0
+        start_time = ARGS.StartDate
+	end_time = ARGS.EndDate
+        logging.info(td.strftime("%Y%m%d   %H:%M")+" specified process starts, from " + start_time + " to " + end_time + "\n")
+        logging.info("\n")
+        clean_dict, clean, raw_title = clean_incoming()
+        finial_title, length = sort_title(clean_dict, raw_title)
+
+        while days <= (int(end_time) - int(start_time)):
+            
+            strdate  = int(start_time) + days
+            all_stations = get_stations_list(urlroot,str(strdate))
+            for station in all_stations:
+                try:
+                    ind = ID.index(str(station) + "\n")
+		    Pro = Province[ind]
+                    results_list, ordered_titles = parse_station(urlroot,str(strdate),station,clean_dict=clean_dict,clean=clean)
+		    ordered_results_list = order_row(result_list, ordered_titles, clean_dict, length)
+                    csv_out(ordered_results_list, finial_title, Pro + strdate + " - " + end_time)
+    
+                except Exception, err:
+		    print str(err)
+		    logging.error(str(err))
                     WrongID.append(station)
                     continue
             days = days + 1
-            
-        with open("log.txt","w") as f:
-            f.write("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
-            f.write(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " initial process ended\n")
-            f.write("\n")
-            f.close()
 
-
-
-
-
-
-
-
-
-
-
+	logging.info(datetime.datetime.utcnow().strftime("%Y%m%d   %H:%M") + " Specified process ended\n")
+        logging.info("These stations is not on station mapping list: " + " ".join(WrongID) + "\n")
+        
+    
+             
+    
+    
